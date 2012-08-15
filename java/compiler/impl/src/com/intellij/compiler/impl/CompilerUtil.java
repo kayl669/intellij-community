@@ -234,7 +234,7 @@ public class CompilerUtil {
     final boolean is3OrNewer = is4OrNewer || isOfVersion(versionString, "1.3");
     final boolean is2OrNewer = is3OrNewer || isOfVersion(versionString, "1.2");
     final boolean is1OrNewer = is2OrNewer || isOfVersion(versionString, "1.0") || isOfVersion(versionString, "1.1");
-    
+
     if (!is1OrNewer) {
       // unknown jdk version, cannot say anything about the corresponding language level, so leave it unchanged
       return languageLevel;
@@ -286,10 +286,8 @@ public class CompilerUtil {
     // do not delete directories themselves, or we'll get rootsChanged() otherwise
     final Collection<File> filesToDelete = new ArrayList<File>(outputDirectories.size() * 2);
     for (File outputDirectory : outputDirectories) {
-      File[] files = outputDirectory.listFiles();
-      if (files != null) {
-        ContainerUtil.addAll(filesToDelete, files);
-      }
+      // IDEA-55816
+      ClearOutputDirectoryUtil.addFileForClearOutputDirectory(filesToDelete, outputDirectory);
     }
     if (filesToDelete.size() > 0) {
       FileUtil.asyncDelete(filesToDelete);
