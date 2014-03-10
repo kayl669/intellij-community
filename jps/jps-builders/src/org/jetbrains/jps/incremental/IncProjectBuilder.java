@@ -175,9 +175,9 @@ public class IncProjectBuilder {
         myProjectDescriptor.timestamps.getStorage().force();
       }
     });
-    
+
     startTempDirectoryCleanupTask();
-    
+
     CompileContextImpl context = null;
     try {
       context = createContext(scope);
@@ -200,7 +200,7 @@ public class IncProjectBuilder {
       if (cause instanceof PersistentEnumerator.CorruptedException ||
           cause instanceof MappingFailedException ||
           cause instanceof IOException) {
-        
+
         myMessageDispatcher.processMessage(new CompilerMessage(
           "", BuildMessage.Kind.INFO,
           "Internal caches are corrupted or have outdated format, forcing project rebuild: " +
@@ -521,11 +521,8 @@ public class IncProjectBuilder {
         // do not delete output root itself to avoid lots of unnecessary "roots_changed" events in IDEA
         final File[] children = outputRoot.listFiles();
         if (children != null) {
-          for (File child : children) {
-            if (!child.delete()) {
-              filesToDelete.add(child);
-            }
-          }
+          // IDEA-55816
+          ClearOutputDirectoryUtil.addFileForClearOutputDirectory(filesToDelete, outputRoot);
         }
         else { // the output root must be file
           if (!outputRoot.delete()) {
@@ -802,10 +799,10 @@ public class IncProjectBuilder {
     }
 
     // In general the set of files corresponding to changed source file may be different
-    // Need this for example, to keep up with case changes in file names  for case-insensitive OSes: 
+    // Need this for example, to keep up with case changes in file names  for case-insensitive OSes:
     // deleting the output before copying is the only way to ensure the case of the output file's name is exactly the same as source file's case
     cleanOldOutputs(context, target);
-    
+
     final List<TargetBuilder<?, ?>> builders = BuilderRegistry.getInstance().getTargetBuilders();
     for (TargetBuilder<?, ?> builder : builders) {
       BuildOperations.buildTarget(target, context, builder);
@@ -824,8 +821,8 @@ public class IncProjectBuilder {
       });
     }
   }
-  
-  
+
+
   private void updateDoneFraction(CompileContext context, final float delta) {
     myTargetsProcessed += delta;
     float processed = myTargetsProcessed;
