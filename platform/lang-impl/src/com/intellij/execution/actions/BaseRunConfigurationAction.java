@@ -17,7 +17,6 @@
 package com.intellij.execution.actions;
 
 import com.intellij.execution.ExecutionBundle;
-import com.intellij.execution.ProgramRunnerUtil;
 import com.intellij.execution.RunnerAndConfigurationSettings;
 import com.intellij.execution.configurations.ConfigurationType;
 import com.intellij.execution.configurations.LocatableConfiguration;
@@ -215,7 +214,7 @@ public abstract class BaseRunConfigurationAction extends ActionGroup {
         return actionName;
       }
     }
-    return ProgramRunnerUtil.shortenName(configuration.getName(), 0);
+    return configuration.getName();
   }
 
   protected abstract void updatePresentation(Presentation presentation, @NotNull String actionText, ConfigurationContext context);
