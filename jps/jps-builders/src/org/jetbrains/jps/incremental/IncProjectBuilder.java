@@ -184,9 +184,9 @@ public class IncProjectBuilder {
         myProjectDescriptor.timestamps.getStorage().force();
       }
     });
-    
+
     startTempDirectoryCleanupTask();
-    
+
     CompileContextImpl context = null;
     try {
       context = createContext(scope);
@@ -582,7 +582,7 @@ public class IncProjectBuilder {
       boolean okToDelete = true;
       final File outputRoot = entry.getKey();
       if (!moduleIndex.isExcluded(outputRoot)) {
-        // if output root itself is directly or indirectly excluded, 
+        // if output root itself is directly or indirectly excluded,
         // there cannot be any manageable sources under it, even if the output root is located under some source root
         // so in this case it is safe to delete such root
         if (JpsPathUtil.isUnder(allSourceRoots, outputRoot)) {
@@ -602,11 +602,8 @@ public class IncProjectBuilder {
         // do not delete output root itself to avoid lots of unnecessary "roots_changed" events in IDEA
         final File[] children = outputRoot.listFiles();
         if (children != null) {
-          for (File child : children) {
-            if (!child.delete()) {
-              filesToDelete.add(child);
-            }
-          }
+          // IDEA-55816
+          ClearOutputDirectoryUtil.addFileForClearOutputDirectory(filesToDelete, outputRoot);
         }
         else { // the output root must be file
           if (!outputRoot.delete()) {
@@ -905,10 +902,10 @@ public class IncProjectBuilder {
     }
 
     // In general the set of files corresponding to changed source file may be different
-    // Need this for example, to keep up with case changes in file names  for case-insensitive OSes: 
+    // Need this for example, to keep up with case changes in file names  for case-insensitive OSes:
     // deleting the output before copying is the only way to ensure the case of the output file's name is exactly the same as source file's case
     cleanOldOutputs(context, target);
-    
+
     final List<TargetBuilder<?, ?>> builders = BuilderRegistry.getInstance().getTargetBuilders();
     final float builderProgressDelta = 1.0f / builders.size();
     for (TargetBuilder<?, ?> builder : builders) {
@@ -948,8 +945,8 @@ public class IncProjectBuilder {
       });
     }
   }
-  
-  
+
+
   private void updateDoneFraction(CompileContext context, final float delta) {
     myTargetsProcessed += delta;
     float processed = myTargetsProcessed;
