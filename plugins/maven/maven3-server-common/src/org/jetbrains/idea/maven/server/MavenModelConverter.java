@@ -107,7 +107,7 @@ public class MavenModelConverter {
   }
 
   public static MavenId createMavenId(Artifact artifact) {
-    return new MavenId(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion());
+    return new MavenId(artifact.getGroupId(), artifact.getArtifactId(), artifact.getBaseVersion());
   }
 
   private static List<MavenResource> convertResources(List<Resource> resources) {
