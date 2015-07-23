@@ -175,7 +175,7 @@ public class TestData implements Cloneable
   }
 
   public String getGeneratedName(JavaRunConfigurationModule runconfigurationmodule) {
-    if (TestType.PACKAGE.getType().equals(TEST_OBJECT)) if (getPackageName().length() == 0) return "<default>";
+    if (TestType.PACKAGE.getType().equals(TEST_OBJECT)) if (getPackageName().length() == 0) return runconfigurationmodule.getModuleName();
     else return getPackageName();
     String name = JavaExecutionUtil.getPresentableClassName(getMainClassName());
     if (TestType.METHOD.getType().equals(TEST_OBJECT)) {
