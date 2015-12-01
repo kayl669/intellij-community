@@ -60,7 +60,7 @@ public class TestNGTestPackage extends TestNGTestObject {
   @Override
   public String getGeneratedName() {
     final String packageName = myConfig.getPersistantData().getPackageName();
-    return packageName.length() == 0 ? "<default>" : packageName;
+    return packageName.length() == 0 ? myConfig.getConfigurationModule().getModuleName() : packageName; //get a better test configuration name (not <All tests>)
   }
 
   @Override
