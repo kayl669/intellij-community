@@ -6,6 +6,7 @@
  */
 package com.intellij.debugger.impl;
 
+import com.intellij.application.options.CodeStyle;
 import com.intellij.debugger.DebuggerBundle;
 import com.intellij.debugger.SourcePosition;
 import com.intellij.debugger.engine.*;
@@ -44,7 +45,6 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.pom.Navigatable;
 import com.intellij.psi.*;
-import com.intellij.psi.codeStyle.CodeStyleSettingsManager;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.classFilter.ClassFilter;
 import com.intellij.ui.content.Content;
@@ -644,7 +644,22 @@ public abstract class DebuggerUtilsEx extends DebuggerUtils {
     if (PsiType.FLOAT.getPresentableText().equals(expectedType)) {
       return vm.mirrorOf((float)value);
     }
-    return createValue(vm, expectedType, (long)value);
+    if (PsiType.LONG.getPresentableText().equals(expectedType)) {
+      return vm.mirrorOf((long)value);
+    }
+    if (PsiType.INT.getPresentableText().equals(expectedType)) {
+      return vm.mirrorOf((int)value);
+    }
+    if (PsiType.SHORT.getPresentableText().equals(expectedType)) {
+      return vm.mirrorOf((short)value);
+    }
+    if (PsiType.BYTE.getPresentableText().equals(expectedType)) {
+      return vm.mirrorOf((byte)value);
+    }
+    if (PsiType.CHAR.getPresentableText().equals(expectedType)) {
+      return vm.mirrorOf((char)value);
+    }
+    return null;
   }
 
   public static Value createValue(VirtualMachineProxyImpl vm, String expectedType, long value) {
@@ -695,6 +710,12 @@ public abstract class DebuggerUtilsEx extends DebuggerUtils {
     if (PsiType.BYTE.getPresentableText().equals(expectedType)) {
       return vm.mirrorOf((byte)value);
     }
+    if (PsiType.DOUBLE.getName().equals(expectedType)) {
+      return vm.mirrorOf((double)value);
+    }
+    if (PsiType.FLOAT.getName().equals(expectedType)) {
+      return vm.mirrorOf((float)value);
+    }
     return null;
   }
 
@@ -730,7 +751,7 @@ public abstract class DebuggerUtilsEx extends DebuggerUtils {
   public static String prepareValueText(String text, Project project) {
     text = StringUtil.unquoteString(text);
     text = StringUtil.unescapeStringCharacters(text);
-    int tabSize = CodeStyleSettingsManager.getSettings(project).getTabSize(StdFileTypes.JAVA);
+    int tabSize = CodeStyle.getSettings(project).getTabSize(StdFileTypes.JAVA);
     if (tabSize < 0) {
       tabSize = 0;
     }

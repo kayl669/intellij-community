@@ -510,13 +510,8 @@ public class InjectedLanguageUtil {
     PsiManagerEx psiManagerEx = (PsiManagerEx)injected.getManager();
     if (psiManagerEx.getProject().isDisposed()) return;
 
-    DebugUtil.startPsiModification("injected clearCaches");
-    try {
-      psiManagerEx.getFileManager().setViewProvider(virtualFile, null);
-    }
-    finally {
-      DebugUtil.finishPsiModification();
-    }
+    DebugUtil.performPsiModification("injected clearCaches", () ->
+      psiManagerEx.getFileManager().setViewProvider(virtualFile, null));
 
     VirtualFile delegate = virtualFile.getDelegate();
     if (!delegate.isValid()) return;
@@ -691,7 +686,7 @@ public class InjectedLanguageUtil {
   public static <T> void putInjectedFileUserData(@NotNull PsiElement element,
                                                  @NotNull Language language,
                                                  @NotNull Key<T> key,
-                                                 T value) {
+                                                 @Nullable T value) {
     PsiFile file = getCachedInjectedFileWithLanguage(element, language);
     if (file != null) {
       file.putUserData(key, value);
@@ -720,7 +715,8 @@ public class InjectedLanguageUtil {
       .getCachedInjectedDocumentsInRange(containingFile, element.getTextRange())
       .stream()
       .map(documentWindow -> PsiDocumentManager.getInstance(containingFile.getProject()).getPsiFile(documentWindow))
-      .filter(file -> file != null && file.getLanguage() == language)
+      .filter(file -> file != null && file.getLanguage() == LanguageSubstitutors.INSTANCE.substituteLanguage(language, file.getVirtualFile(),
+                                                                                                             file.getProject()))
       .findFirst()
       .orElse(null);
   }

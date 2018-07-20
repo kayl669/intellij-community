@@ -650,7 +650,9 @@ public class AbstractPopup implements JBPopup {
         myState = State.SHOWN;
         return;
       }
-      storeDimensionSize(myContent.getSize());
+      Dimension size = myContent.getSize();
+      JBInsets.removeFrom(size, myContent.getInsets());
+      storeDimensionSize(size);
       if (myUseDimServiceForXYLocation) {
         final JRootPane root = myComponent.getRootPane();
         if (root != null) {
@@ -777,6 +779,8 @@ public class AbstractPopup implements JBPopup {
     if (sizeToSet != null) {
       sizeToSet.width = Math.max(sizeToSet.width, myContent.getMinimumSize().width);
       sizeToSet.height = Math.max(sizeToSet.height, myContent.getMinimumSize().height);
+
+      JBInsets.addTo(sizeToSet, myContent.getInsets());
 
       myContent.setSize(sizeToSet);
       myContent.setPreferredSize(sizeToSet);
@@ -921,18 +925,12 @@ public class AbstractPopup implements JBPopup {
 
     window.setFocusableWindowState(myRequestFocus);
     window.setFocusable(myRequestFocus);
-    // temporary w/a (will be brought back in jdk)
-    if ("TRUE".equals(getContent().getClientProperty("BookmarkPopup"))) {
-      window.setType(Window.Type.NORMAL);
-    } else if (SystemInfo.isJetBrainsJvm) {
-      window.setType(Window.Type.POPUP);
-    }
 
     // Swing popup default always on top state is set in true
     window.setAlwaysOnTop(false);
 
     if (myFocusable) {
-      window.setFocusTraversalPolicy(new FocusTraversalPolicy() {
+      FocusTraversalPolicy focusTraversalPolicy = new FocusTraversalPolicy() {
         @Override
         public Component getComponentAfter(Container aContainer, Component aComponent) {
           return getComponent();
@@ -961,10 +959,16 @@ public class AbstractPopup implements JBPopup {
         public Component getDefaultComponent(Container aContainer) {
           return getComponent();
         }
-      });
+      };
+      window.setFocusTraversalPolicy(focusTraversalPolicy);
+      Disposer.register(this, () -> window.setFocusTraversalPolicy(null));
     }
 
     window.setAutoRequestFocus(myRequestFocus);
+
+    final String data = getUserData(String.class);
+    final boolean popupIsSimpleWindow = "TRUE".equals(getContent().getClientProperty("BookmarkPopup"));
+    myContent.getRootPane().putClientProperty("SIMPLE_WINDOW", "SIMPLE_WINDOW".equals(data) || popupIsSimpleWindow);
 
     myPopup.show();
 
@@ -1015,7 +1019,6 @@ public class AbstractPopup implements JBPopup {
       window.setAutoRequestFocus(myRequestFocus);
 
       SwingUtilities.invokeLater(afterShow);
-      delayKeyEventsUntilFocusSettlesDown();
     } else {
       //noinspection SSBasedInspection
       SwingUtilities.invokeLater(() -> {
@@ -1029,12 +1032,6 @@ public class AbstractPopup implements JBPopup {
     }
     debugState("popup shown", State.SHOWING);
     myState = State.SHOWN;
-  }
-
-  private void delayKeyEventsUntilFocusSettlesDown() {
-    ActionCallback typeAhead = new ActionCallback();
-    getFocusManager().typeAheadUntil(typeAhead, "AbstractPopup");
-    getFocusManager().doWhenFocusSettlesDown(() -> typeAhead.setDone());
   }
 
   public void focusPreferredComponent() {

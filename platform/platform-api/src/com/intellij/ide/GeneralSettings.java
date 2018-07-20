@@ -8,6 +8,8 @@ import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.util.ObjectUtils;
+import com.intellij.util.PlatformUtils;
 import com.intellij.util.xmlb.XmlSerializerUtil;
 import com.intellij.util.xmlb.annotations.OptionTag;
 import com.intellij.util.xmlb.annotations.Transient;
@@ -32,12 +34,15 @@ public class GeneralSettings implements PersistentStateComponent<GeneralSettings
   public static final String PROP_INACTIVE_TIMEOUT = "inactiveTimeout";
   public static final String PROP_SUPPORT_SCREEN_READERS = "supportScreenReaders";
 
+  public static final String SUPPORT_SCREEN_READERS = "ide.support.screenreaders.enabled";
+  private static final Boolean SUPPORT_SCREEN_READERS_OVERRIDEN = getSupportScreenReadersOverriden();
+
   static final UINumericRange SAVE_FILES_AFTER_IDLE_SEC = new UINumericRange(15, 1, 300);
 
   private String myBrowserPath = BrowserUtil.getDefaultAlternativeBrowserPath();
   private boolean myShowTipsOnStartup = true;
   private boolean myReopenLastProject = true;
-  private boolean mySupportScreenReaders = false;
+  private boolean mySupportScreenReaders = ObjectUtils.chooseNotNull(SUPPORT_SCREEN_READERS_OVERRIDEN, Boolean.FALSE);
   private boolean mySyncOnFrameActivation = true;
   private boolean mySaveOnFrameDeactivation = true;
   private boolean myAutoSaveIfInactive = false;  // If true the IDEA automatically saves files if it is inactive for some seconds
@@ -47,6 +52,7 @@ public class GeneralSettings implements PersistentStateComponent<GeneralSettings
   private boolean myUseDefaultBrowser = true;
   private boolean mySearchInBackground;
   private boolean myConfirmExit = true;
+  private boolean myShowWelcomeScreen = !PlatformUtils.isDataGrip();
   private int myConfirmOpenNewProject = OPEN_PROJECT_ASK;
   private ProcessCloseConfirmation myProcessCloseConfirmation = ProcessCloseConfirmation.ASK;
 
@@ -116,6 +122,19 @@ public class GeneralSettings implements PersistentStateComponent<GeneralSettings
 
   public void setReopenLastProject(boolean reopenLastProject) {
     myReopenLastProject = reopenLastProject;
+  }
+
+  @Nullable
+  private static Boolean getSupportScreenReadersOverriden() {
+    String prop = System.getProperty(SUPPORT_SCREEN_READERS);
+    if (prop != null) {
+      return Boolean.parseBoolean(prop);
+    }
+    return null;
+  }
+
+  public static boolean isSupportScreenReadersOverriden() {
+    return SUPPORT_SCREEN_READERS_OVERRIDEN != null;
   }
 
   public boolean isSupportScreenReaders() {
@@ -227,6 +246,14 @@ public class GeneralSettings implements PersistentStateComponent<GeneralSettings
 
   public void setConfirmExit(boolean confirmExit) {
     myConfirmExit = confirmExit;
+  }
+
+  public boolean isShowWelcomeScreen() {
+    return myShowWelcomeScreen;
+  }
+
+  public void setShowWelcomeScreen(boolean show) {
+    myShowWelcomeScreen = show;
   }
 
   @MagicConstant(intValues = {OPEN_PROJECT_ASK, OPEN_PROJECT_NEW_WINDOW, OPEN_PROJECT_SAME_WINDOW})

@@ -1,6 +1,4 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.intellij.idea;
 
 import com.intellij.concurrency.IdeaForkJoinWorkerThreadFactory;
@@ -20,6 +18,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.ShutDownTracker;
 import com.intellij.openapi.util.SystemInfo;
 import com.intellij.openapi.util.SystemInfoRt;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.openapi.util.io.win32.IdeaWin32;
 import com.intellij.openapi.util.text.StringUtil;
@@ -27,11 +26,14 @@ import com.intellij.ui.AppUIUtil;
 import com.intellij.util.Consumer;
 import com.intellij.util.EnvironmentUtil;
 import com.intellij.util.PlatformUtils;
+import com.intellij.util.SystemProperties;
+import com.intellij.util.ui.UIUtil;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.PatternLayout;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 import org.jetbrains.io.BuiltInServer;
 
 import javax.swing.*;
@@ -81,6 +83,8 @@ public class StartupUtil {
     IdeaForkJoinWorkerThreadFactory.setupForkJoinCommonPool(Main.isHeadless(args));
     boolean newConfigFolder = false;
 
+    checkHiDPISettings();
+
     if (!Main.isHeadless()) {
       AppUIUtil.updateFrameClass();
       newConfigFolder = !new File(PathManager.getConfigPath()).exists();
@@ -117,16 +121,21 @@ public class StartupUtil {
       System.exit(Main.INSTANCE_CHECK_FAILED);
     }
 
-    if (newConfigFolder) {
-      appStarter.beforeImportConfigs();
-      ConfigImportHelper.importConfigsTo(PathManager.getConfigPath());
-    }
-
+    // the log initialization should happen only after locking the system directory
     Logger.setFactory(LoggerFactory.class);
     Logger log = Logger.getInstance(Main.class);
     startLogging(log);
     loadSystemLibraries(log);
     fixProcessEnvironment(log);
+
+    if (!Main.isHeadless()) {
+      UIUtil.initDefaultLAF();
+    }
+
+    if (newConfigFolder) {
+      appStarter.beforeImportConfigs();
+      ConfigImportHelper.importConfigsTo(PathManager.getConfigPath());
+    }
 
     if (!Main.isHeadless()) {
       AppUIUtil.updateWindowIcon(JOptionPane.getRootFrame());
@@ -171,6 +180,18 @@ public class StartupUtil {
     return true;
   }
 
+  @TestOnly
+  public static void test_checkHiDPISettings() {
+    checkHiDPISettings();
+  }
+
+  private static void checkHiDPISettings() {
+    if (!SystemProperties.getBooleanProperty("hidpi", true)) {
+      // suppress JRE-HiDPI mode
+      System.setProperty("sun.java2d.uiScale.enabled", "false");
+    }
+  }
+
   private static synchronized boolean checkSystemFolders() {
     String configPath = PathManager.getConfigPath();
     PathManager.ensureConfigFolderExists();
@@ -188,6 +209,14 @@ public class StartupUtil {
                        "If you have modified the '" + PathManager.PROPERTY_SYSTEM_PATH + "' property please make sure it is correct,\n" +
                        "otherwise please re-install the IDE.";
       Main.showMessage("Invalid System Path", message, true);
+      return false;
+    }
+
+    if (FileUtil.pathsEqual(configPath, systemPath)) {
+      String message = "Config and system paths seem to be equal.\n" +
+                       "If you have modified '" + PathManager.PROPERTY_CONFIG_PATH + "' or '" + PathManager.PROPERTY_SYSTEM_PATH + "' properties,\n" +
+                       "please make sure they point to different directories, otherwise please re-install the IDE.";
+      Main.showMessage("Invalid Config or System Path", message, true);
       return false;
     }
 

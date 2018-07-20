@@ -71,9 +71,12 @@ public class StandardInstructionVisitor extends InstructionVisitor {
     if (dfaDest instanceof DfaVariableValue) {
       DfaVariableValue var = (DfaVariableValue) dfaDest;
 
-      final PsiModifierListOwner psi = var.getPsiVariable();
+      PsiModifierListOwner psi = var.getPsiVariable();
       boolean forceDeclaredNullity = !(psi instanceof PsiParameter && psi.getParent() instanceof PsiParameterList);
-      if (forceDeclaredNullity && var.getInherentNullability() == Nullness.NOT_NULL) {
+      if (psi instanceof PsiField && !psi.hasModifierProperty(PsiModifier.FINAL) && var.getInherentNullability() == Nullness.UNKNOWN) {
+        checkNotNullable(memState, dfaSource, NullabilityProblemKind.assigningNullableValueToNonAnnotatedField.problem(rValue));        
+      }
+      else if (forceDeclaredNullity && var.getInherentNullability() == Nullness.NOT_NULL) {
         checkNotNullable(memState, dfaSource, kind.problem(rValue));
       }
       if (!(psi instanceof PsiField) || !psi.hasModifierProperty(PsiModifier.VOLATILE)) {
@@ -455,7 +458,7 @@ public class StandardInstructionVisitor extends InstructionVisitor {
       state.push(returnValue);
       finalStates.add(state);
     }
-    
+
     return falseStates;
   }
 
@@ -563,7 +566,9 @@ public class StandardInstructionVisitor extends InstructionVisitor {
 
   protected boolean checkNotNullable(DfaMemoryState state, DfaValue value, @Nullable NullabilityProblemKind.NullabilityProblem<?> problem) {
     boolean notNullable = state.checkNotNullable(value);
-    if (notNullable && !NullabilityProblemKind.passingNullableArgumentToNonAnnotatedParameter.isMyProblem(problem)) {
+    if (notNullable && 
+        !NullabilityProblemKind.passingNullableArgumentToNonAnnotatedParameter.isMyProblem(problem) &&
+        !NullabilityProblemKind.assigningNullableValueToNonAnnotatedField.isMyProblem(problem)) {
       DfaValueFactory factory = ((DfaMemoryStateImpl)state).getFactory();
       state.applyCondition(factory.createCondition(value, RelationType.NE, factory.getConstFactory().getNull()));
     }
@@ -668,7 +673,7 @@ public class StandardInstructionVisitor extends InstructionVisitor {
       if (condition instanceof DfaConstValue && Boolean.FALSE.equals(((DfaConstValue)condition).getValue())) {
         continue;
       }
-      final DfaMemoryState copy = i == relations.length - 1 ? memState : memState.createCopy();
+      final DfaMemoryState copy = i == relations.length - 1 && !states.isEmpty() ? memState : memState.createCopy();
       if (copy.applyCondition(condition)) {
         boolean isTrue = relationType.isSubRelation(relation);
         copy.push(factory.getBoolean(isTrue));
@@ -683,6 +688,11 @@ public class StandardInstructionVisitor extends InstructionVisitor {
         }
         states.add(new DfaInstructionState(next, copy));
       }
+    }
+    if (states.isEmpty()) {
+      // Neither of relations could be applied: likely comparison with NaN; do not split the state in this case, just push false
+      memState.push(factory.getConstFactory().getFalse());
+      return nextInstruction(instruction, runner, memState);
     }
     myCanBeNullInInstanceof.add(instruction);
 

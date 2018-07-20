@@ -202,6 +202,16 @@ class CommunityRepositoryModules {
     plugin("intellij.errorProne") {
       withModule("intellij.errorProne.jps", "jps/error-prone-jps-plugin.jar")
     },
+    plugin("intellij.cucumber.java") {
+      withModule("intellij.cucumber.jvmFormatter")
+      withResource("../../community/lib/cucumber-core-1.2.4.jar", "lib")
+      withResource("../../community/lib/gherkin-2.12.2.jar", "lib")
+      doNotCreateSeparateJarForLocalizableResources()
+    },
+    plugin("intellij.cucumber.groovy") {
+      withResource("../../community/lib/cucumber-core-1.2.4.jar", "lib")//todo[nik] fix dependencies instead
+      doNotCreateSeparateJarForLocalizableResources()
+    },
     plugin("intellij.java.decompiler") {
       directoryName = "java-decompiler"
       mainJarName = "java-decompiler.jar"
@@ -234,7 +244,7 @@ class CommunityRepositoryModules {
       withModule("intellij.android.artwork")
       withModule("intellij.android.observable", "android.jar")
       withModule("intellij.android.observable.ui", "android.jar")
-      withModule("intellij.android.flags", "android.jar")
+      withModule("android.sdktools.flags", "android.jar")
       withModule("intellij.android.designer", "android.jar")
       withModule("intellij.android.sdkUpdates", "android.jar")
       withModule("intellij.android.wizard", "android.jar")
@@ -256,23 +266,21 @@ class CommunityRepositoryModules {
       withModule("android.sdktools.pixelprobe", "pixelprobe.jar")
 
       withModule("android.sdktools.binary-resources", "sdk-tools.jar")
-      withModule("intellij.android.analyzer", "sdk-tools.jar")
+      withModule("android.sdktools.analyzer", "sdk-tools.jar")
       withModule("android.sdktools.ddmlib", "sdk-tools.jar")
       withModule("android.sdktools.dvlib", "sdk-tools.jar")
       withModule("android.sdktools.draw9patch", "sdk-tools.jar")
       withModule("android.sdktools.instant-run-client", "sdk-tools.jar")
       withModule("android.sdktools.instant-run-common", "sdk-tools.jar")
-      withModule("android.sdktools.lint-api", "sdk-tools.jar")
-      withModule("android.sdktools.lint-checks", "sdk-tools.jar")
       withModule("android.sdktools.ninepatch", "sdk-tools.jar")
       withModule("android.sdktools.perflib", "sdk-tools.jar")
       withModule("android.sdktools.builder-model", "sdk-tools.jar")
       withModule("android.sdktools.builder-test-api", "sdk-tools.jar")
       withModule("android.sdktools.android-annotations", "sdk-tools.jar")
-      withModule("intellij.android.layoutInspector", "sdk-tools.jar")
+      withModule("android.sdktools.layoutinspector", "sdk-tools.jar")
 
       withModule("intellij.android.gradle.jps", "jps/android-gradle-jps.jar")
-      withModule("intellij.android.jps", "jps/android-jps-plugin.jar")
+      withModule("intellij.android.jps", "jps/android-jps-plugin.jar", null)
 
       withProjectLibrary("freemarker-2.3.20") //todo[nik] move to module libraries
       withProjectLibrary("jgraphx-3.4.0.1") //todo[nik] move to module libraries

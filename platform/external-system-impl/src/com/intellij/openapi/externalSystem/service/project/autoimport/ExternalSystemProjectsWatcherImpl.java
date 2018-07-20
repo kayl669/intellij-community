@@ -7,8 +7,11 @@ import com.intellij.ProjectTopics;
 import com.intellij.ide.file.BatchFileChangeListener;
 import com.intellij.notification.*;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.application.*;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.Result;
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.components.ServiceManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.EditorFactory;
 import com.intellij.openapi.editor.event.*;
@@ -39,6 +42,7 @@ import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.*;
 import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
@@ -72,6 +76,8 @@ import static com.intellij.util.ui.update.MergingUpdateQueue.ANY_COMPONENT;
  */
 public class ExternalSystemProjectsWatcherImpl extends ExternalSystemTaskNotificationListenerAdapter
   implements ExternalSystemProjectsWatcher {
+
+  private static final Logger LOG = Logger.getInstance(ExternalSystemProjectsWatcherImpl.class);
 
   private static final ExtensionPointName<Contributor> EP_NAME =
     ExtensionPointName.create("com.intellij.externalProjectWatcherContributor");
@@ -120,12 +126,12 @@ public class ExternalSystemProjectsWatcherImpl extends ExternalSystemTaskNotific
     ApplicationManager.getApplication().getMessageBus().connect(myProject)
       .subscribe(BatchFileChangeListener.TOPIC, new BatchFileChangeListener() {
         @Override
-        public void batchChangeStarted(Project project) {
+        public void batchChangeStarted(@NotNull Project project, @Nullable String activityName) {
           myRefreshRequestsQueue.suspend();
         }
 
         @Override
-        public void batchChangeCompleted(Project project) {
+        public void batchChangeCompleted(@NotNull Project project) {
           myRefreshRequestsQueue.resume();
         }
       });
@@ -300,6 +306,7 @@ public class ExternalSystemProjectsWatcherImpl extends ExternalSystemTaskNotific
       }
     }
     else {
+      LOG.debug("Scheduling new external project update notification", new Throwable("Schedule update call trace"));
       myUpdatesQueue.queue(new Update(Pair.create(systemId, projectPath)) {
         @Override
         public void run() {
@@ -442,9 +449,7 @@ public class ExternalSystemProjectsWatcherImpl extends ExternalSystemTaskNotific
   }
 
   private static void makeUserAware(final MergingUpdateQueue mergingUpdateQueue, final Project project) {
-    AccessToken accessToken = ReadAction.start();
-
-    try {
+    ApplicationManager.getApplication().runReadAction(() -> {
       EditorEventMulticaster multicaster = EditorFactory.getInstance().getEventMulticaster();
 
       multicaster.addCaretListener(new CaretListener() {
@@ -483,10 +488,7 @@ public class ExternalSystemProjectsWatcherImpl extends ExternalSystemTaskNotific
           }
         }
       });
-    }
-    finally {
-      accessToken.finish();
-    }
+    });
   }
 
   private static class MyNotification extends Notification {
@@ -546,7 +548,7 @@ public class ExternalSystemProjectsWatcherImpl extends ExternalSystemTaskNotific
 
   private class MyFileChangeListener extends FileChangeListenerBase {
     private final ExternalSystemProjectsWatcherImpl myWatcher;
-    private MultiMap<String/* file path */, String /* project path */> myKnownFiles = MultiMap.createSet();
+    private final MultiMap<String/* file path */, String /* project path */> myKnownFiles = MultiMap.createSet();
     private List<VirtualFile> filesToUpdate;
     private List<VirtualFile> filesToRemove;
 
@@ -558,9 +560,10 @@ public class ExternalSystemProjectsWatcherImpl extends ExternalSystemTaskNotific
     protected boolean isRelevant(String path) {
       if (!myKnownFiles.get(path).isEmpty()) return true;
 
+      String canonicalPath = FileUtil.toCanonicalPath(path);
       for (VirtualFilePointer pointer : myFilesPointers.keySet()) {
-        VirtualFile f = pointer.getFile();
-        if (f != null && FileUtil.pathsEqual(path, f.getPath())) {
+        String filePath = VfsUtilCore.urlToPath(pointer.getUrl());
+        if (StringUtil.isNotEmpty(filePath) && FileUtil.namesEqual(canonicalPath, FileUtil.toCanonicalPath(filePath))) {
           for (String projectPath : myFilesPointers.get(pointer)) {
             myKnownFiles.putValue(path, projectPath);
             myKnownAffectedFiles.putValue(projectPath, path);

@@ -44,6 +44,10 @@ class NormalCompletionDfaTest extends NormalCompletionTestCase {
   void testCastQualifierForPrivateFieldReference() { doTest() }
   void testOrAssignmentDfa() { doTest() }
   void testAssignmentPreciseTypeDfa() { doTest() }
+  void testAssignmentTwicePreciseTypeDfa() { doTest() }
+  void testAssignmentParameterDfa() { doTest() }
+  void testAssignmentNoPreciseTypeDfa() { doTest() }
+  void testAssignmentPrimitiveLiteral() { doTest() }
   void testDeclarationPreciseTypeDfa() { doTest() }
   void testInstanceOfAssignmentDfa() { doTest() }
   void testStreamDfa() { doTest() }
@@ -52,6 +56,8 @@ class NormalCompletionDfaTest extends NormalCompletionTestCase {
   void testFieldWithCastingCaret() { doTest() }
   void testCastWhenMethodComesFromDfaSuperType() { doTest() }
   void testGenericTypeDfa() { doTest() }
+  void testNarrowingReturnType() { doTest() }
+  void testNarrowingReturnTypeInVoidContext() { doTest() }
   void testNoUnnecessaryCastDfa() { doTest() }
   void testNoUnnecessaryCastRawDfa() { doTest() }
   void testNoUnnecessaryCastDeepHierarchy() { doTest() }

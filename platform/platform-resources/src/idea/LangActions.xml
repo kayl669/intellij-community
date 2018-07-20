@@ -398,12 +398,6 @@
     <group id="WeighingNewGroup" class="com.intellij.ide.actions.WeighingNewActionGroup"/>
 
     <!-- Toolbar -->
-    <!--
-    <group id="ToolbarNewElement">
-      <action id="NewElementToolbarAction" class="com.intellij.ide.actions.NewElementToolbarAction" icon="/general/add.png"/>
-      <add-to-group group-id="MainToolBar" anchor="first"/>
-    </group>
-    -->
     <action id="RevealIn" class="com.intellij.ide.actions.RevealFileAction">
       <add-to-group group-id="RunContextPopupGroup" anchor="last"/>
     </action>
@@ -661,7 +655,7 @@
       <separator/>
       <reference ref="EditSource"/>
       <reference ref="TreeNodeExclusion"/>
-      <action id="UsageView.Remove" class="com.intellij.usages.actions.RemoveUsageAction" use-shortcut-of="SafeDelete"/>
+      <action id="UsageView.Remove" class="com.intellij.usages.actions.RemoveUsageAction" use-shortcut-of="$Cut"/>
       <separator/>
       <action id="UsageView.ShowRecentFindUsages" class="com.intellij.find.impl.ShowRecentFindUsagesAction" icon="AllIcons.Actions.Back"
               use-shortcut-of="RecentFiles"/>
@@ -809,6 +803,9 @@
     </group>
 
     <group id="XDebugger.Frames.Tree.Popup">
+      <action id="Debugger.CopyStack" class="com.intellij.xdebugger.impl.frame.XDebuggerFramesList$CopyStackAction"
+              text="Copy Stack"
+              icon="AllIcons.Actions.Copy"/>
     </group>
 
     <group id="XDebugger.Frames.TopToolbar">
@@ -1049,6 +1046,11 @@
       <action id="RunInspectionOn" class="com.intellij.codeInspection.ui.actions.KeyAwareInspectionViewAction$RunInspectionOn"/>
     </group>
 
+    <group id="ExtractMethodToolWindow.TreePopup" compact="true">
+      <reference ref="EditSource"/>
+      <reference ref="TreeNodeExclusion"/>
+    </group>
+
     <group id="RunDashboardContentToolbar">
       <!--suppress PluginXmlValidity -->
       <action id="RunDashboard.Run" class="com.intellij.execution.dashboard.actions.RunAction" use-shortcut-of="RunClass"/>
@@ -1076,6 +1078,12 @@
 
     <action id="RenameFile" class="com.intellij.refactoring.actions.RenameFileAction">
       <add-to-group group-id="EditorTabPopupMenuEx" anchor="after" relative-to-action="AddAllToFavorites"/>
+    </action>
+
+    <action id="UpdateRunningApplication" class="com.intellij.execution.update.UpdateRunningApplicationAction"
+            text="Update Running Application">
+      <keyboard-shortcut first-keystroke="control F10" keymap="$default"/>
+      <add-to-group group-id="DebugMainMenu" anchor="before" relative-to-action="StepOver"/>
     </action>
   </actions>
 </idea-plugin>

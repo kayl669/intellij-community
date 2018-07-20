@@ -1,18 +1,4 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.intellij.util.io;
 
 import com.intellij.Patches;
@@ -107,8 +93,8 @@ public final class HttpRequests {
   }
 
   public static class HttpStatusException extends IOException {
-    private int myStatusCode;
-    private String myUrl;
+    private final int myStatusCode;
+    private final String myUrl;
 
     public HttpStatusException(@NotNull String message, int statusCode, @NotNull String url) {
       super(message);
@@ -385,9 +371,8 @@ public final class HttpRequests {
   }
 
   private static <T> T process(RequestBuilderImpl builder, RequestProcessor<T> processor) throws IOException {
-    LOG.assertTrue(ApplicationManager.getApplication() == null ||
-                   ApplicationManager.getApplication().isUnitTestMode() ||
-                   !ApplicationManager.getApplication().isReadAccessAllowed(),
+    Application app = ApplicationManager.getApplication();
+    LOG.assertTrue(app == null || app.isUnitTestMode() || app.isHeadlessEnvironment() || !app.isReadAccessAllowed(),
                    "Network shouldn't be accessed in EDT or inside read action");
 
     ClassLoader contextLoader = Thread.currentThread().getContextClassLoader();
@@ -441,12 +426,12 @@ public final class HttpRequests {
   }
 
   private static URLConnection openConnection(RequestBuilderImpl builder, RequestImpl request) throws IOException {
-    String url = request.myUrl;
+    if (builder.myForceHttps && StringUtil.startsWith(request.myUrl, "http:")) {
+      request.myUrl = "https:" + request.myUrl.substring(5);
+    }
 
     for (int i = 0; i < builder.myRedirectLimit; i++) {
-      if (builder.myForceHttps && StringUtil.startsWith(url, "http:")) {
-        request.myUrl = url = "https:" + url.substring(5);
-      }
+      String url = request.myUrl;
 
       final URLConnection connection;
       if (!builder.myUseProxy) {

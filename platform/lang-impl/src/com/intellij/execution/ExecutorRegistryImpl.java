@@ -200,8 +200,9 @@ public class ExecutorRegistryImpl extends ExecutorRegistry implements Disposable
           }
         }
         final ProgramRunner runner = RunnerRegistry.getInstance().getRunner(myExecutor.getId(), configuration);
-        if (!ExecutionTargetManager.canRun(runnerAndConfigurationSettings, pair.getTarget())
-            && runner != null && !isStarting(project, myExecutor.getId(), runner.getRunnerId())) {
+        if (runner == null
+            || !ExecutionTargetManager.canRun(runnerAndConfigurationSettings, pair.getTarget())
+            || isStarting(project, myExecutor.getId(), runner.getRunnerId())) {
           return false;
         }
       }
@@ -244,6 +245,7 @@ public class ExecutorRegistryImpl extends ExecutorRegistry implements Disposable
         text = getTemplatePresentation().getTextWithMnemonic();
       }
 
+      presentation.setVisible(myExecutor.isApplicable(project));
       presentation.setEnabled(enabled);
       presentation.setText(text);
     }

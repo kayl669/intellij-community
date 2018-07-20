@@ -1,18 +1,4 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 
 package com.intellij.ide.util.gotoByName;
 
@@ -463,6 +449,7 @@ public abstract class ChooseByNameBase {
     myTextFieldPanel.add(myTextField);
     Font editorFont = EditorUtil.getEditorFont();
     myTextField.setFont(editorFont);
+    myTextField.putClientProperty("caretWidth", JBUI.scale(EditorUtil.getDefaultCaretWidth()));
 
     if (checkBoxName != null) {
       if (myCheckBoxShortcut != null) {
@@ -607,7 +594,9 @@ public abstract class ChooseByNameBase {
     myTextField.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(@NotNull ActionEvent actionEvent) {
-        doClose(true);
+        if (!getChosenElements().isEmpty()) {
+          doClose(true);
+        }
       }
     });
 
@@ -744,7 +733,7 @@ public abstract class ChooseByNameBase {
   protected void doClose(final boolean ok) {
     if (checkDisposed()) return;
 
-    if (closeForbidden(ok) || getChosenElements().isEmpty()) return;
+    if (closeForbidden(ok)) return;
 
     cancelListUpdater();
     close(ok);
@@ -878,7 +867,8 @@ public abstract class ChooseByNameBase {
     JLayeredPane layeredPane;
     final Window window = WindowManager.getInstance().suggestParentWindow(myProject);
 
-    Component parent = UIUtil.findUltimateParent(window);
+    //Component parent = UIUtil.findUltimateParent(window);
+    Component parent= window;
 
     if (parent instanceof JFrame) {
       layeredPane = ((JFrame)parent).getLayeredPane();
@@ -1088,9 +1078,10 @@ public abstract class ChooseByNameBase {
   @Nullable
   public Object getChosenElement() {
     final List<Object> elements = getChosenElements();
-    return elements != null && elements.size() == 1 ? elements.get(0) : null;
+    return elements.size() == 1 ? elements.get(0) : null;
   }
 
+  @NotNull
   protected List<Object> getChosenElements() {
     return ContainerUtil.filter(myList.getSelectedValuesList(), o -> o != null && !isSpecialElement(o));
   }
@@ -1384,7 +1375,7 @@ public abstract class ChooseByNameBase {
 
     private void scheduleIncrementalListUpdate(Set<Object> elements, int lastCount) {
       myUpdateListAlarm.addRequest(() -> {
-        if (myCalcElementsThread != this) return;
+        if (myCalcElementsThread != this || !myProgress.isRunning()) return;
 
         int count = elements.size();
         if (count > lastCount) {
@@ -1432,7 +1423,7 @@ public abstract class ChooseByNameBase {
     public void onCanceled(@NotNull ProgressIndicator indicator) {
       LOG.assertTrue(myCalcElementsThread == this, myCalcElementsThread);
 
-      if (!myProject.isDisposed()) {
+      if (!myProject.isDisposed() && !checkDisposed()) {
         new CalcElementsThread(myPattern, myCheckboxState, myCallback, myModalityState, mySelectionPolicy).scheduleThread();
       }
     }

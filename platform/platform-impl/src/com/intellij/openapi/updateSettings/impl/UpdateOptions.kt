@@ -22,7 +22,7 @@ class UpdateOptions : BaseState() {
   val externalUpdateChannels by map<String, String>()
 
   @get:OptionTag("CHECK_NEEDED")
-  var isCheckNeeded by property(false)
+  var isCheckNeeded by property(true)
 
   @get:OptionTag("LAST_TIME_CHECKED")
   var lastTimeChecked by property(0L)
@@ -35,4 +35,7 @@ class UpdateOptions : BaseState() {
 
   @get:OptionTag("SECURE_CONNECTION")
   var isUseSecureConnection by property(true)
+
+  @get:OptionTag("THIRD_PARTY_PLUGINS_ALLOWED")
+  var isThirdPartyPluginsAllowed by property(false)
 }

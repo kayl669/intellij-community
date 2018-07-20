@@ -12,7 +12,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.fest.swing.core.Robot;
-import org.fest.swing.edt.GuiActionRunner;
 import org.fest.swing.edt.GuiQuery;
 import org.fest.swing.edt.GuiTask;
 import org.fest.swing.timing.Condition;
@@ -30,13 +29,12 @@ import static org.fest.swing.edt.GuiActionRunner.execute;
 import static org.fest.swing.timing.Pause.pause;
 import static org.fest.util.Strings.quote;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 public class FileEditorFixture extends EditorFixture {
 
   private final FileEditorManager myManager;
   private final IdeFrameFixture myFrame;
+  private final EditorTabsFixture tabs;
 
   public FileEditorFixture(Robot robot, IdeFrameFixture frame) {
     super(robot, null);
@@ -48,6 +46,7 @@ public class FileEditorFixture extends EditorFixture {
       }
     });
     myFrame = frame;
+    tabs = new EditorTabsFixture(robot, frame);
   }
 
   /**
@@ -330,4 +329,25 @@ public class FileEditorFixture extends EditorFixture {
       assertEquals(name, parent.getName());
     }
   }
+
+  /**
+   * Selects the editor with a given tab name.
+   */
+  public FileEditorFixture selectTab(@NotNull final String tabName) {
+    tabs.waitTab(tabName, 5).selectTab(tabName);
+    return this;
+  }
+
+  /**
+   * Closes the editor with a given tab name.
+   */
+  public FileEditorFixture closeTab(@NotNull final String tabName) {
+    tabs.closeTab(tabName);
+    return this;
+  }
+
+  public Boolean hasTab(@NotNull final String tabName) {
+    return tabs.hasTab(tabName);
+  }
+
 }

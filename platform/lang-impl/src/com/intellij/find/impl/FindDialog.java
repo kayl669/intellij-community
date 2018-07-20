@@ -57,6 +57,7 @@ import com.intellij.openapi.util.registry.Registry;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.newvfs.VfsPresentationUtil;
 import com.intellij.projectImport.ProjectAttachProcessor;
 import com.intellij.psi.PsiBundle;
 import com.intellij.psi.PsiDocumentManager;
@@ -161,10 +162,14 @@ public class FindDialog extends DialogWrapper implements FindUI {
 
   @Override
   public void doCancelAction() { // doCancel disposes fields and then calls dispose
+    saveSettings();
+    super.doCancelAction();
+  }
+
+  public void saveSettings() {
     FindSettings.getInstance().setDefaultScopeName(myScopeCombo.getSelectedScopeName());
     applyTo(FindManager.getInstance(myProject).getFindInProjectModel(), false);
     rememberResultsPreviewWasOpen();
-    super.doCancelAction();
   }
 
   private void rememberResultsPreviewWasOpen() {
@@ -1591,7 +1596,8 @@ public class FindDialog extends DialogWrapper implements FindUI {
       setBackground(myUsageRenderer.getBackground());
       if (!isSelected && value instanceof UsageInfo2UsageAdapter) {
         UsageInfo2UsageAdapter usageAdapter = (UsageInfo2UsageAdapter)value;
-        Color color = FileColorManager.getInstance(usageAdapter.getUsageInfo().getProject()).getFileColor(usageAdapter.getFile());
+        Project project = usageAdapter.getUsageInfo().getProject();
+        Color color = VfsPresentationUtil.getFileBackgroundColor(project, usageAdapter.getFile());
         setBackground(color);
         myUsageRenderer.setBackground(color);
         myFileAndLineNumber.setBackground(color);

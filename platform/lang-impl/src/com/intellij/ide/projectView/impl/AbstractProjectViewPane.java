@@ -1,6 +1,4 @@
-/*
- * Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 
 package com.intellij.ide.projectView.impl;
 
@@ -146,6 +144,10 @@ public abstract class AbstractProjectViewPane implements DataProvider, Disposabl
     if (Comparing.strEqual(mySubId, subId)) return;
     saveExpandedPaths();
     mySubId = subId;
+    onSubIdChange();
+  }
+
+  protected void onSubIdChange() {
   }
 
   public boolean isInitiallyVisible() {
@@ -286,6 +288,12 @@ public abstract class AbstractProjectViewPane implements DataProvider, Disposabl
 
   @Override
   public Object getData(String dataId) {
+    Object data =
+      myTreeStructure instanceof AbstractTreeStructureBase ?
+      ((AbstractTreeStructureBase)myTreeStructure).getDataFromProviders(getSelectedNodes(AbstractTreeNode.class), dataId) : null;
+    if (data != null) {
+      return data;
+    }
     if (CommonDataKeys.NAVIGATABLE_ARRAY.is(dataId)) {
       TreePath[] paths = getSelectionPaths();
       if (paths == null) return null;
@@ -306,9 +314,6 @@ public abstract class AbstractProjectViewPane implements DataProvider, Disposabl
       else {
         return navigatables.toArray(new Navigatable[0]);
       }
-    }
-    if (myTreeStructure instanceof AbstractTreeStructureBase) {
-      return ((AbstractTreeStructureBase) myTreeStructure).getDataFromProviders(getSelectedNodes(AbstractTreeNode.class), dataId);
     }
     return null;
   }

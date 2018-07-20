@@ -13,7 +13,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class Utils {
-  private static final long REQUIRED_FREE_SPACE = 10_0000_0000L;
+  private static final long REQUIRED_FREE_SPACE = 20_0000_0000L;
 
   private static final int BUFFER_SIZE = 8192;  // to minimize native memory allocations for I/O operations
   private static final byte[] BUFFER = new byte[BUFFER_SIZE];
@@ -274,7 +274,7 @@ public class Utils {
     private final List<? extends ZipEntry> myEntries;
     private InputStream myStream = null;
     private int myNextEntry = 0;
-    private byte[] myByte = new byte[1];
+    private final byte[] myByte = new byte[1];
 
     private NormalizedZipInputStream(File file) throws IOException {
       myZip = new ZipFile(file);

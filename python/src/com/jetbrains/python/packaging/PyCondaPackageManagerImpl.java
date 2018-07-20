@@ -64,13 +64,10 @@ public class PyCondaPackageManagerImpl extends PyPackageManagerImpl {
         arguments.add(requirement.toString());
       }
       arguments.add("-y");
-      if (extraArgs.contains("-U")) {
-        getCondaOutput("update", arguments);
-      }
-      else {
+      if (!extraArgs.contains("-U")) {
         arguments.addAll(extraArgs);
-        getCondaOutput("install", arguments);
       }
+      getCondaOutput("install", arguments);
     }
     else {
       super.install(requirements, extraArgs);
@@ -204,8 +201,8 @@ public class PyCondaPackageManagerImpl extends PyPackageManagerImpl {
   }
 
   @NotNull
-  public static String createVirtualEnv(@NotNull String destinationDir, String version) throws ExecutionException {
-    final String condaExecutable = PyCondaPackageService.getSystemCondaExecutable();
+  public static String createVirtualEnv(@Nullable String condaExecutable, @NotNull String destinationDir,
+                                        @NotNull String version) throws ExecutionException {
     if (condaExecutable == null) throw new PyExecutionException("Cannot find conda", "Conda", Collections.emptyList(), new ProcessOutput());
 
     final ArrayList<String> parameters = Lists.newArrayList(condaExecutable, "create", "-p", destinationDir, "-y",

@@ -21,7 +21,6 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileWithId;
 import com.intellij.ui.PanelWithAnchor;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
@@ -44,10 +43,10 @@ public class JavaScratchConfigurable extends SettingsEditor<JavaScratchConfigura
   private final LabeledComponent<JTextField> myMainClass;
   private final LabeledComponent<TextFieldWithBrowseButton> myScratchPathField;
   private final LabeledComponent<ModulesComboBox> myModule;
-  private JPanel myWholePanel;
+  private final JPanel myWholePanel;
 
   private final ConfigurationModuleSelector myModuleSelector;
-  private JrePathEditor myJrePathEditor;
+  private final JrePathEditor myJrePathEditor;
   private JComponent myAnchor;
 
   public JavaScratchConfigurable(final Project project) {
@@ -110,7 +109,7 @@ public class JavaScratchConfigurable extends SettingsEditor<JavaScratchConfigura
     configuration.setAlternativeJrePathEnabled(myJrePathEditor.isAlternativeJreSelected());
 
     final VirtualFile vFile = getVFileFromEditor();
-    configuration.SCRATCH_FILE_ID = vFile instanceof VirtualFileWithId ? ((VirtualFileWithId)vFile).getId() : 0;
+    configuration.setScratchFileUrl(vFile != null ? vFile.getUrl() : null);
   }
 
   @Nullable

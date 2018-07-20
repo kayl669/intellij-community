@@ -1,4 +1,4 @@
-// Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.intellij.openapi.wm.impl.welcomeScreen;
 
 import com.intellij.diagnostic.IdeMessagePanel;
@@ -206,7 +206,7 @@ public class FlatWelcomeFrame extends JFrame implements IdeFrame, Disposable, Ac
   }
 
   private class FlatWelcomeScreen extends JPanel implements WelcomeScreen {
-    private JBSlidingPanel mySlidingPanel = new JBSlidingPanel();
+    private final JBSlidingPanel mySlidingPanel = new JBSlidingPanel();
     public Consumer<List<NotificationType>> myEventListener;
     public Computable<Point> myEventLocation;
 
@@ -435,7 +435,7 @@ public class FlatWelcomeFrame extends JFrame implements IdeFrame, Disposable, Ac
      * Wraps an {@link ActionLink} component and delegates accessibility support to it.
      */
     protected class JActionLinkPanel extends JPanel {
-      @NotNull private ActionLink myActionLink;
+      @NotNull private final ActionLink myActionLink;
 
       public JActionLinkPanel(@NotNull ActionLink actionLink) {
         super(new BorderLayout());
@@ -759,6 +759,7 @@ public class FlatWelcomeFrame extends JFrame implements IdeFrame, Disposable, Ac
   @Nullable
   @Override
   public Project getProject() {
+    if (ApplicationManager.getApplication().isDisposeInProgress()) return null;
     return ProjectManager.getInstance().getDefaultProject();
   }
 
@@ -863,7 +864,7 @@ public class FlatWelcomeFrame extends JFrame implements IdeFrame, Disposable, Ac
     pane.setBackground(getProjectsBackground());
     actionsListPanel.add(pane, BorderLayout.CENTER);
 
-    int width = (int)Math.min(Math.round(list.getPreferredSize().getWidth()), 200);
+    int width = (int)Math.max(Math.min(Math.round(list.getPreferredSize().getWidth()), JBUI.scale(200)), JBUI.scale(100));
     pane.setPreferredSize(JBUI.size(width + 14, -1));
 
     boolean singleProjectGenerator = list.getModel().getSize() == 1;

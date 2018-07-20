@@ -1,18 +1,4 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.intellij.openapi.actionSystem.impl;
 
 import com.intellij.AbstractBundle;
@@ -24,11 +10,12 @@ import com.intellij.ide.plugins.IdeaPluginDescriptor;
 import com.intellij.ide.plugins.PluginManager;
 import com.intellij.ide.plugins.PluginManagerCore;
 import com.intellij.idea.IdeaLogger;
-import com.intellij.internal.statistic.customUsageCollectors.actions.ActionIdProvider;
-import com.intellij.internal.statistic.customUsageCollectors.actions.ActionsCollector;
+import com.intellij.internal.statistic.collectors.fus.actions.persistence.ActionIdProvider;
+import com.intellij.internal.statistic.collectors.fus.actions.persistence.ActionsCollectorImpl;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.actionSystem.ex.ActionManagerEx;
+import com.intellij.openapi.actionSystem.ex.ActionPopupMenuListener;
 import com.intellij.openapi.actionSystem.ex.ActionUtil;
 import com.intellij.openapi.actionSystem.ex.AnActionListener;
 import com.intellij.openapi.application.*;
@@ -126,9 +113,10 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
   private final MultiMap<String,String> myId2GroupId = new MultiMap<>();
   private final List<String> myNotRegisteredInternalActionIds = new ArrayList<>();
   private final List<AnActionListener> myActionListeners = ContainerUtil.createLockFreeCopyOnWriteList();
+  private final List<ActionPopupMenuListener> myActionPopupMenuListeners = ContainerUtil.createLockFreeCopyOnWriteList();
   private final KeymapManagerEx myKeymapManager;
   private final DataManager myDataManager;
-  private final List<ActionPopupMenuImpl> myPopups = new ArrayList<>();
+  private final List<Object> myPopups = new ArrayList<>();
   private final Map<AnAction, DataContext> myQueuedNotifications = new LinkedHashMap<>();
   private final Map<AnAction, AnActionEvent> myQueuedNotificationsEvents = new LinkedHashMap<>();
   private MyTimer myTimer;
@@ -137,6 +125,7 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
   private String myPrevPerformedActionId;
   private long myLastTimeEditorWasTypedIn;
   private boolean myTransparentOnlyUpdate;
+  private final Map<OverridingAction, AnAction> myBaseActions = new HashMap<>();
 
   ActionManagerImpl(@NotNull KeymapManager keymapManager, DataManager dataManager) {
     myKeymapManager = (KeymapManagerEx)keymapManager;
@@ -517,7 +506,9 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
 
   @Override
   public String getId(@NotNull AnAction action) {
-    LOG.assertTrue(!(action instanceof ActionStub));
+    if (action instanceof ActionStub) {
+      return ((ActionStub) action).getId();
+    }
     synchronized (myLock) {
       return myAction2Id.get(action);
     }
@@ -1078,12 +1069,22 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
     return ArrayUtilRt.toStringArray(myPlugin2Id.get(pluginName));
   }
 
-  public void addActionPopup(final ActionPopupMenuImpl menu) {
-    myPopups.add(menu);
+  public void addActionPopup(final Object menu) {
+    boolean added = myPopups.add(menu);
+    if (added && menu instanceof ActionPopupMenu) {
+      for (ActionPopupMenuListener listener : myActionPopupMenuListeners) {
+        listener.actionPopupMenuCreated((ActionPopupMenu)menu);
+      }
+    }
   }
 
-  public void removeActionPopup(final ActionPopupMenuImpl menu) {
+  public void removeActionPopup(final Object menu) {
     final boolean removed = myPopups.remove(menu);
+    if (removed && menu instanceof ActionPopupMenu) {
+      for (ActionPopupMenuListener listener : myActionPopupMenuListeners) {
+        listener.actionPopupMenuReleased((ActionPopupMenu)menu);
+      }
+    }
     if (removed && myPopups.isEmpty()) {
       flushActionPerformed();
     }
@@ -1093,17 +1094,21 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
   public void queueActionPerformedEvent(final AnAction action, DataContext context, AnActionEvent event) {
     if (!myPopups.isEmpty()) {
       myQueuedNotifications.put(action, context);
-    } else {
+    }
+    else {
       fireAfterActionPerformed(action, context, event);
     }
   }
 
-  //@Override
-  //public AnAction replaceAction(String actionId, @NotNull AnAction newAction) {
-  //  synchronized (myLock) {
-  //    return replaceAction(actionId, newAction, null);
-  //  }
-  //}
+  public boolean isToolWindowContextMenuVisible() {
+    for (Object popup : myPopups) {
+      if (popup instanceof ActionPopupMenuImpl &&
+          ((ActionPopupMenuImpl)popup).isToolWindowContextMenu()) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   @Override
   public boolean isActionPopupStackEmpty() {
@@ -1115,9 +1120,23 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
     return myTransparentOnlyUpdate;
   }
 
+  @Override
+  public void addActionPopupMenuListener(ActionPopupMenuListener listener, Disposable parentDisposable) {
+    myActionPopupMenuListeners.add(listener);
+    Disposer.register(parentDisposable, new Disposable() {
+      @Override
+      public void dispose() {
+        myActionPopupMenuListeners.remove(listener);
+      }
+    });
+  }
+
   private AnAction replaceAction(@NotNull String actionId, @NotNull AnAction newAction, @Nullable PluginId pluginId) {
-    AnAction oldAction = getActionOrStub(actionId);
+    AnAction oldAction = newAction instanceof OverridingAction ? getAction(actionId) : getActionOrStub(actionId);
     if (oldAction != null) {
+      if (newAction instanceof OverridingAction) {
+        myBaseActions.put((OverridingAction) newAction, oldAction);
+      }
       boolean isGroup = oldAction instanceof ActionGroup;
       if (isGroup != newAction instanceof ActionGroup) {
         throw new IllegalStateException("cannot replace a group with an action and vice versa: " + actionId);
@@ -1133,6 +1152,13 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
     }
     registerAction(actionId, newAction, pluginId);
     return oldAction;
+  }
+
+  /**
+   * Returns the action overridden by the specified overriding action (with overrides="true" in plugin.xml).
+   */
+  public AnAction getBaseAction(OverridingAction overridingAction) {
+    return myBaseActions.get(overridingAction);
   }
 
   private void flushActionPerformed() {
@@ -1176,7 +1202,7 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
       }
       //noinspection AssignmentToStaticFieldFromInstanceMethod
       IdeaLogger.ourLastActionId = myLastPreformedActionId;
-      ActionsCollector.getInstance().record(myLastPreformedActionId);
+      ActionsCollectorImpl.getInstance().record(myLastPreformedActionId);
     }
     for (AnActionListener listener : myActionListeners) {
       listener.beforeActionPerformed(action, dataContext, event);
@@ -1319,7 +1345,8 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
             if (event.getID() == WindowEvent.WINDOW_OPENED ||event.getID() == WindowEvent.WINDOW_ACTIVATED) {
               if (!result.isProcessed()) {
                 final WindowEvent we = (WindowEvent)event;
-                IdeFocusManager.findInstanceByComponent(we.getWindow()).doWhenFocusSettlesDown(result.createSetDoneRunnable());
+                IdeFocusManager.findInstanceByComponent(we.getWindow()).doWhenFocusSettlesDown(result.createSetDoneRunnable(),
+                                                                                               ModalityState.defaultModalityState());
               }
             }
           }
@@ -1329,7 +1356,7 @@ public final class ActionManagerImpl extends ActionManagerEx implements Disposab
         result.setDone();
         queueActionPerformedEvent(action, context, event);
       }
-    ));
+    ), ModalityState.defaultModalityState());
   }
 
   private class MyTimer extends Timer implements ActionListener {

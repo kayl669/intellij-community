@@ -302,7 +302,7 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
       registerFileTypeWithoutNotification(pair.fileType, pair.matchers, true);
     }
 
-    if (PlatformUtils.isDatabaseIDE() || PlatformUtils.isCidr()) {
+    if (PlatformUtils.isDataGrip() || PlatformUtils.isCidr()) {
       // build scripts are correct, but it is required to run from sources
       return;
     }
@@ -1171,6 +1171,7 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
       FileNameMatcher matcher = trinity.getFirst();
       if (type != null) {
         removeAssociation(type, matcher, false);
+        myRemovedMappings.put(matcher, Pair.create(type, trinity.third));
       }
       else {
         myUnresolvedRemovedMappings.put(matcher, Trinity.create(trinity.getSecond(), myUnresolvedMappings.get(matcher), trinity.getThird()));
@@ -1239,7 +1240,7 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     }
 
     if (!myUnresolvedMappings.isEmpty()) {
-      FileNameMatcher[] unresolvedMappingKeys = myUnresolvedMappings.keySet().toArray(new FileNameMatcher[myUnresolvedMappings.size()]);
+      FileNameMatcher[] unresolvedMappingKeys = myUnresolvedMappings.keySet().toArray(new FileNameMatcher[0]);
       Arrays.sort(unresolvedMappingKeys, Comparator.comparing(FileNameMatcher::getPresentableString));
 
       for (FileNameMatcher fileNameMatcher : unresolvedMappingKeys) {
@@ -1543,6 +1544,7 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     }
     myStandardFileTypes.clear();
     myUnresolvedMappings.clear();
+    myRemovedMappings.clear();
     mySchemeManager.setSchemes(Collections.emptyList());
   }
 

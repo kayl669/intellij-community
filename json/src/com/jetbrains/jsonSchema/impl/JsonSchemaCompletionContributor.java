@@ -1,3 +1,4 @@
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.jetbrains.jsonSchema.impl;
 
 import com.intellij.codeInsight.AutoPopupController;
@@ -114,7 +115,7 @@ public class JsonSchemaCompletionContributor extends CompletionContributor {
       final PsiElement checkable = myWalker.goUpToCheckable(myPosition);
       if (checkable == null) return;
       final boolean isName = myWalker.isName(checkable);
-      final List<JsonSchemaVariantsTreeBuilder.Step> position = myWalker.findPosition(checkable, isName, !isName);
+      final List<JsonSchemaVariantsTreeBuilder.Step> position = myWalker.findPosition(checkable, !isName);
       if (position == null || position.isEmpty() && !isName) return;
 
       final Collection<JsonSchemaObject> schemas = new JsonSchemaResolver(myRootSchema, false, position).resolve();
@@ -216,9 +217,9 @@ public class JsonSchemaCompletionContributor extends CompletionContributor {
       key = !myWrapInQuotes ? key : StringUtil.wrapWithDoubleQuote(key);
       LookupElementBuilder builder = LookupElementBuilder.create(key);
 
-      final String typeText = jsonSchemaObject.getDocumentation(true);
+      final String typeText = JsonSchemaDocumentationProvider.getBestDocumentation(true, jsonSchemaObject);
       if (!StringUtil.isEmptyOrSpaces(typeText)) {
-        builder = builder.withTypeText(typeText, true);
+        builder = builder.withTypeText(StringUtil.removeHtmlTags(typeText), true);
       }
 
       final JsonSchemaType type = jsonSchemaObject.getType();

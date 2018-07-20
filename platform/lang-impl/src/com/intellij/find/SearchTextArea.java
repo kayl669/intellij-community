@@ -21,9 +21,9 @@ import com.intellij.icons.AllIcons;
 import com.intellij.ide.DataManager;
 import com.intellij.ide.IdeTooltip;
 import com.intellij.ide.IdeTooltipManager;
+import com.intellij.ide.ui.laf.IconCache;
 import com.intellij.ide.ui.laf.darcula.ui.DarculaTextBorder;
 import com.intellij.ide.ui.laf.darcula.ui.DarculaTextFieldUI;
-import com.intellij.ide.ui.laf.intellij.MacIntelliJIconCache;
 import com.intellij.ide.ui.laf.intellij.MacIntelliJTextBorder;
 import com.intellij.ide.ui.laf.intellij.WinIntelliJTextFieldUI;
 import com.intellij.openapi.actionSystem.*;
@@ -81,9 +81,9 @@ public class SearchTextArea extends NonOpaquePanel implements PropertyChangeList
   private final boolean myInfoMode;
   private final JLabel myInfoLabel;
   private JPanel myIconsPanel = null;
-  private ActionButton myNewLineButton;
-  private ActionButton myClearButton;
-  private JBScrollPane myScrollPane;
+  private final ActionButton myNewLineButton;
+  private final ActionButton myClearButton;
+  private final JBScrollPane myScrollPane;
   private final ActionButton myHistoryPopupButton;
   private final LafHelper myHelper;
   private boolean myMultilineEnabled = true;
@@ -100,13 +100,8 @@ public class SearchTextArea extends NonOpaquePanel implements PropertyChangeList
     myTextArea = textArea;
     mySearchMode = searchMode;
     myInfoMode = infoMode;
-
-    if (UIUtil.isUnderWindowsLookAndFeel()) {
-      myTextArea.setFont(UIManager.getFont("TextField.font"));
-    } else {
-      Utils.setSmallerFont(myTextArea);
-    }
-
+    updateFont();
+    
     myTextArea.addPropertyChangeListener("background", this);
     myTextArea.addPropertyChangeListener("font", this);
     myTextArea.addFocusListener(this);
@@ -130,7 +125,7 @@ public class SearchTextArea extends NonOpaquePanel implements PropertyChangeList
       @Override
       public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
         if (getProperty("filterNewlines") == Boolean.TRUE && str.indexOf('\n')>=0) {
-          str = StringUtil.replace(str, "\n", "");
+          str = StringUtil.replace(str, "\n", " ");
         }
         if (!StringUtil.isEmpty(str)) super.insertString(offs, str, a);
       }
@@ -219,6 +214,22 @@ public class SearchTextArea extends NonOpaquePanel implements PropertyChangeList
     myIconsPanel = new NonOpaquePanel();
 
     updateLayout();
+  }
+
+  @Override
+  public void updateUI() {
+    super.updateUI();
+    updateFont();
+  }
+
+  private void updateFont() {
+    if (myTextArea != null) {
+      if (UIUtil.isUnderWindowsLookAndFeel()) {
+        myTextArea.setFont(UIManager.getFont("TextField.font"));
+      } else {
+        Utils.setSmallerFont(myTextArea);
+      }
+    }
   }
 
   protected void updateLayout() {
@@ -339,8 +350,8 @@ public class SearchTextArea extends NonOpaquePanel implements PropertyChangeList
     myInfoLabel.setText(info);
   }
 
-  private static Color enabledBorderColor = new JBColor(Gray._196, Gray._100);
-  private static Color disabledBorderColor = Gray._83;
+  private static final Color enabledBorderColor = new JBColor(Gray._196, Gray._100);
+  private static final Color disabledBorderColor = Gray._83;
 
   @Override
   public void paint(Graphics graphics) {
@@ -487,7 +498,7 @@ public class SearchTextArea extends NonOpaquePanel implements PropertyChangeList
 
     @Override
     Icon getShowHistoryIcon() {
-      return MacIntelliJIconCache.getIcon("searchFieldWithHistory");
+      return IconCache.getIcon("searchFieldWithHistory");
     }
 
     @Override

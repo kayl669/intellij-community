@@ -1,6 +1,4 @@
-/*
- * Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.intellij.openapi.ui;
 
 import com.intellij.CommonBundle;
@@ -500,13 +498,6 @@ public abstract class MasterDetailsComponent implements Configurable, DetailsCom
   private void createUIComponents() {
     myTree = new Tree() {
       @Override
-      public Dimension getPreferredScrollableViewportSize() {
-        Dimension size = super.getPreferredScrollableViewportSize();
-        size = new Dimension(size.width + 20, size.height);
-        return size;
-      }
-
-      @Override
       @SuppressWarnings("NonStaticInitializer")
       public JToolTip createToolTip() {
         final JToolTip toolTip = new JToolTip() {
@@ -935,11 +926,12 @@ public abstract class MasterDetailsComponent implements Configurable, DetailsCom
 
     @Override
     public void actionPerformed(AnActionEvent e) {
-      final JBPopupFactory popupFactory = JBPopupFactory.getInstance();
-      final DataContext dataContext = e.getDataContext();
-      final ListPopupStep step = popupFactory.createActionsStep(myActionGroup, dataContext, false, false,
-                                                                myActionGroup.getTemplatePresentation().getText(), myTree, true,
-                                                                myPreselection != null ? myPreselection.getDefaultIndex() : 0, true);
+      JBPopupFactory popupFactory = JBPopupFactory.getInstance();
+      DataContext dataContext = e.getDataContext();
+      ListPopupStep step = popupFactory.createActionsStep(
+        myActionGroup, dataContext, ActionPlaces.UNKNOWN, false,
+        false, myActionGroup.getTemplatePresentation().getText(), myTree,
+        true, myPreselection != null ? myPreselection.getDefaultIndex() : 0, true);
       final ListPopup listPopup = popupFactory.createListPopup(step);
       listPopup.setHandleAutoSelectionBeforeShow(true);
       if (e instanceof AnActionButton.AnActionEventWrapper) {

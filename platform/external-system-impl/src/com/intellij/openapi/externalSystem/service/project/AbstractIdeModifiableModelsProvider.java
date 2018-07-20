@@ -77,10 +77,10 @@ public abstract class AbstractIdeModifiableModelsProvider extends IdeModelsProvi
   private static final Logger LOG = Logger.getInstance(AbstractIdeModifiableModelsProvider.class);
 
   private ModifiableModuleModel myModifiableModuleModel;
-  private Map<Module, ModifiableRootModel> myModifiableRootModels = new THashMap<>();
-  private Map<Module, ModifiableFacetModel> myModifiableFacetModels = new THashMap<>();
-  private Map<Module, String> myProductionModulesForTestModules = new THashMap<>();
-  private Map<Library, Library.ModifiableModel> myModifiableLibraryModels = new IdentityHashMap<>();
+  private final Map<Module, ModifiableRootModel> myModifiableRootModels = new THashMap<>();
+  private final Map<Module, ModifiableFacetModel> myModifiableFacetModels = new THashMap<>();
+  private final Map<Module, String> myProductionModulesForTestModules = new THashMap<>();
+  private final Map<Library, Library.ModifiableModel> myModifiableLibraryModels = new IdentityHashMap<>();
   private ModifiableArtifactModel myModifiableArtifactModel;
   private AbstractIdeModifiableModelsProvider.MyPackagingElementResolvingContext myPackagingElementResolvingContext;
   private final ArtifactExternalDependenciesImporter myArtifactExternalDependenciesImporter;
@@ -416,8 +416,17 @@ public abstract class AbstractIdeModifiableModelsProvider extends IdeModelsProvi
         updateSubstitutions();
       }
       processExternalArtifactDependencies();
-      for (Library.ModifiableModel each : myModifiableLibraryModels.values()) {
-        each.commit();
+      for (Map.Entry<Library, Library.ModifiableModel> entry : myModifiableLibraryModels.entrySet()) {
+        Library fromLibrary = entry.getKey();
+        Library.ModifiableModel modifiableModel = entry.getValue();
+        // removed and (previously) not committed library is being disposed by LibraryTableBase.LibraryModel.removeLibrary
+        // the modifiable model of such library shouldn't be committed
+        if (fromLibrary instanceof LibraryEx && ((LibraryEx)fromLibrary).isDisposed()) {
+          Disposer.dispose(modifiableModel);
+        }
+        else {
+          modifiableModel.commit();
+        }
       }
       getModifiableProjectLibrariesModel().commit();
 

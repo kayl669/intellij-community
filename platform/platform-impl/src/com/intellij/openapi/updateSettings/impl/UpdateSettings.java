@@ -1,6 +1,4 @@
-/*
- * Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.intellij.openapi.updateSettings.impl;
 
 import com.intellij.openapi.application.ApplicationInfo;
@@ -34,7 +32,14 @@ public class UpdateSettings implements PersistentStateComponent<UpdateOptions>, 
   private UpdateOptions myState = new UpdateOptions();
 
   public boolean isPlatformUpdateEnabled() {
-    return myPackageManager == null && !PathManager.isSnap();
+    return getPackageManagerName() == null;
+  }
+
+  @Nullable
+  public String getPackageManagerName() {
+    return "true".equalsIgnoreCase(myPackageManager) ? "Toolbox" :
+           PathManager.isSnap() ? "Snap" :
+           myPackageManager;
   }
 
   @NotNull
@@ -144,6 +149,14 @@ public class UpdateSettings implements PersistentStateComponent<UpdateOptions>, 
 
   public boolean canUseSecureConnection() {
     return myState.isUseSecureConnection() && NetUtils.isSniEnabled();
+  }
+
+  public boolean isThirdPartyPluginsAllowed() {
+    return myState.isThirdPartyPluginsAllowed();
+  }
+
+  public void setThirdPartyPluginsAllowed(boolean value) {
+    myState.setThirdPartyPluginsAllowed(value);
   }
 
   //<editor-fold desc="Deprecated stuff.">

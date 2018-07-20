@@ -4,7 +4,12 @@
 package com.intellij.openapi.vcs
 
 import com.intellij.diff.util.Side
+import com.intellij.openapi.application.runWriteAction
+import com.intellij.openapi.command.CommandProcessor
+import com.intellij.openapi.command.undo.DocumentReferenceManager
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vcs.ex.Range
+import com.intellij.testFramework.LightVirtualFile
 
 class PartialLineStatusTrackerTest : BaseLineStatusTrackerTestCase() {
   fun testSimple1() {
@@ -205,7 +210,7 @@ class PartialLineStatusTrackerTest : BaseLineStatusTrackerTestCase() {
       assertBaseTextContentIs("A_B_C_D_E_F_G_H_")
       assertAffectedChangelists("Default", "Test")
 
-      val helper = partialTracker.handlePartialCommit(Side.LEFT, "Test")
+      val helper = handlePartialCommit(Side.LEFT, "Test")
       helper.applyChanges()
 
       assertHelperContentIs("A_B_C_E_F_G_N_H_", helper)
@@ -228,7 +233,7 @@ class PartialLineStatusTrackerTest : BaseLineStatusTrackerTestCase() {
       assertBaseTextContentIs("A_B_C_D_E_F_G_H_")
       assertAffectedChangelists("Default", "Test")
 
-      val helper = partialTracker.handlePartialCommit(Side.LEFT, "Default")
+      val helper = handlePartialCommit(Side.LEFT, "Default")
       helper.applyChanges()
 
       assertHelperContentIs("A_B1_C_D_E_F_M_G_H_", helper)
@@ -251,7 +256,7 @@ class PartialLineStatusTrackerTest : BaseLineStatusTrackerTestCase() {
       assertBaseTextContentIs("A_B_C_D_E_F_G_H_")
       assertAffectedChangelists("Default", "Test")
 
-      val helper = partialTracker.handlePartialCommit(Side.RIGHT, "Test")
+      val helper = handlePartialCommit(Side.RIGHT, "Test")
       helper.applyChanges()
 
       assertHelperContentIs("A_B1_C_D_E_F_M_G_H_", helper)
@@ -278,7 +283,7 @@ class PartialLineStatusTrackerTest : BaseLineStatusTrackerTestCase() {
         runCommand {
           "B1_".replace("X_Y_Z_")
 
-          val helper = partialTracker.handlePartialCommit(Side.LEFT, "Default")
+          val helper = handlePartialCommit(Side.LEFT, "Default")
           helper.applyChanges()
 
           assertHelperContentIs("A_X_Y_Z_C_D_E_F_M_G_H_", helper)
@@ -307,7 +312,7 @@ class PartialLineStatusTrackerTest : BaseLineStatusTrackerTestCase() {
         runCommand {
           "B1_".replace("X_Y_Z_")
 
-          val helper = partialTracker.handlePartialCommit(Side.LEFT, "Default")
+          val helper = handlePartialCommit(Side.LEFT, "Default")
 
           "N".replace("N2")
           "M".replace("M2")
@@ -324,6 +329,118 @@ class PartialLineStatusTrackerTest : BaseLineStatusTrackerTestCase() {
           assertAffectedChangelists("Test")
         }
       })
+    }
+  }
+
+  fun testUndoTransparentAction1() {
+    testPartial("A_B_C_D_E") {
+      val anotherFile = LightVirtualFile("Another.txt", parseInput("X_Y_Z"))
+      val anotherDocument = FileDocumentManager.getInstance().getDocument(anotherFile)!!
+
+      "C".replace("C1")
+      range(0).moveTo("Test 1")
+
+      "E".delete()
+
+      runWriteAction {
+        CommandProcessor.getInstance().executeCommand(getProject(), Runnable {
+          anotherDocument.deleteString(0, 1)
+        }, null, null)
+      }
+
+      runWriteAction {
+        CommandProcessor.getInstance().runUndoTransparentAction {
+          document.replaceString(0, 1, "A2")
+        }
+      }
+
+      runWriteAction {
+        CommandProcessor.getInstance().executeCommand(getProject(), Runnable {
+          anotherDocument.insertString(0, "B22")
+        }, null, null)
+      }
+
+      undo()
+
+      assertTextContentIs("A_B_C1_D_E")
+      range().assertChangelist("Test 1")
+    }
+  }
+
+  fun testUndoTransparentAction2() {
+    testPartial("A_B_C_D_E") {
+      val anotherFile = LightVirtualFile("Another.txt", parseInput("X_Y_Z"))
+      val anotherDocument = FileDocumentManager.getInstance().getDocument(anotherFile)!!
+
+      "C".replace("C1")
+      range(0).moveTo("Test 1")
+
+      "E".delete()
+
+      runWriteAction {
+        CommandProcessor.getInstance().executeCommand(getProject(), Runnable {
+          anotherDocument.deleteString(0, 1)
+        }, null, null)
+      }
+
+      runWriteAction {
+        CommandProcessor.getInstance().runUndoTransparentAction {
+          document.replaceString(0, 1, "A2")
+        }
+      }
+
+      runWriteAction {
+        CommandProcessor.getInstance().executeCommand(getProject(), Runnable {
+          anotherDocument.insertString(0, "B22")
+        }, null, null)
+      }
+
+      runWriteAction {
+        CommandProcessor.getInstance().executeCommand(getProject(), Runnable {
+          anotherDocument.insertString(0, "B22")
+        }, null, null)
+      }
+
+      undo()
+
+      assertTextContentIs("A_B_C1_D_E")
+      range().assertChangelist("Test 1")
+    }
+  }
+
+
+  fun testUndoTransparentAction3() {
+    testPartial("A_B_C_D_E") {
+      val anotherFile = LightVirtualFile("Another.txt", parseInput("X_Y_Z"))
+      val anotherDocument = FileDocumentManager.getInstance().getDocument(anotherFile)!!
+
+      "C".replace("C1")
+      range(0).moveTo("Test 1")
+
+      "E".delete()
+
+      runWriteAction {
+        CommandProcessor.getInstance().executeCommand(getProject(), Runnable {
+          anotherDocument.deleteString(0, 1)
+        }, null, null)
+      }
+
+      runWriteAction {
+        CommandProcessor.getInstance().runUndoTransparentAction {
+          document.replaceString(0, 1, "A2")
+        }
+      }
+
+      runWriteAction {
+        CommandProcessor.getInstance().executeCommand(getProject(), Runnable {
+          undoManager.nonundoableActionPerformed(DocumentReferenceManager.getInstance().create(anotherDocument), false)
+        }, null, null)
+      }
+
+      undo()
+
+      assertTextContentIs("A_B_C1_D_E")
+      range().assertChangelist("Test 1")
     }
   }
 

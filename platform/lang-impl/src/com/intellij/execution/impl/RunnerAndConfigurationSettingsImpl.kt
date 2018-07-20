@@ -1,4 +1,4 @@
-// Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package com.intellij.execution.impl
 
 import com.intellij.configurationStore.SerializableScheme
@@ -31,21 +31,21 @@ import java.util.*
 
 private val LOG = logger<RunnerAndConfigurationSettings>()
 
-private val RUNNER_ID = "RunnerId"
+private const val RUNNER_ID = "RunnerId"
 
-private val CONFIGURATION_TYPE_ATTRIBUTE = "type"
-private val FACTORY_NAME_ATTRIBUTE = "factoryName"
-private val FOLDER_NAME = "folderName"
-val NAME_ATTR = "name"
-val DUMMY_ELEMENT_NAME = "dummy"
-private val TEMPORARY_ATTRIBUTE = "temporary"
-private val EDIT_BEFORE_RUN = "editBeforeRun"
-private val ACTIVATE_TOOLWINDOW_BEFORE_RUN = "activateToolWindowBeforeRun"
+private const val CONFIGURATION_TYPE_ATTRIBUTE = "type"
+private const val FACTORY_NAME_ATTRIBUTE = "factoryName"
+private const val FOLDER_NAME = "folderName"
+const val NAME_ATTR = "name"
+const val DUMMY_ELEMENT_NAME = "dummy"
+private const val TEMPORARY_ATTRIBUTE = "temporary"
+private const val EDIT_BEFORE_RUN = "editBeforeRun"
+private const val ACTIVATE_TOOLWINDOW_BEFORE_RUN = "activateToolWindowBeforeRun"
 
-private val TEMP_CONFIGURATION = "tempConfiguration"
-internal val TEMPLATE_FLAG_ATTRIBUTE = "default"
+private const val TEMP_CONFIGURATION = "tempConfiguration"
+internal const val TEMPLATE_FLAG_ATTRIBUTE = "default"
 
-val SINGLETON = "singleton"
+const val SINGLETON = "singleton"
 
 enum class RunConfigurationLevel {
   WORKSPACE, PROJECT, TEMPORARY
@@ -57,9 +57,11 @@ class RunnerAndConfigurationSettingsImpl @JvmOverloads constructor(private val m
                                                                    private var singleton: Boolean = false,
                                                                    var level: RunConfigurationLevel = RunConfigurationLevel.WORKSPACE) : Cloneable, RunnerAndConfigurationSettings, Comparable<Any>, SerializableScheme {
   companion object {
+    @Suppress("DEPRECATION")
     @JvmStatic
-    fun getUniqueIdFor(configuration: RunConfiguration) =
-      "${configuration.type.displayName}.${configuration.name}${(configuration as? UnknownRunConfiguration)?.uniqueID ?: ""}"
+    fun getUniqueIdFor(configuration: RunConfiguration): String {
+      return "${configuration.type.displayName}.${configuration.name}${(configuration as? UnknownRunConfiguration)?.uniqueID ?: ""}"
+    }
   }
 
   private val runnerSettings = object : RunnerItem<RunnerSettings>("RunnerSettings") {
@@ -166,6 +168,7 @@ class RunnerAndConfigurationSettingsImpl @JvmOverloads constructor(private val m
 
     isEditBeforeRun = (element.getAttributeBooleanValue(EDIT_BEFORE_RUN))
     val value = element.getAttributeValue(ACTIVATE_TOOLWINDOW_BEFORE_RUN)
+    @Suppress("PlatformExtensionReceiverOfInline")
     isActivateToolWindowBeforeRun = value == null || value.toBoolean()
     folderName = element.getAttributeValue(FOLDER_NAME)
     val factory = manager.getFactory(element.getAttributeValue(CONFIGURATION_TYPE_ATTRIBUTE), element.getAttributeValue(FACTORY_NAME_ATTRIBUTE), !isTemplate) ?: return
@@ -181,7 +184,7 @@ class RunnerAndConfigurationSettingsImpl @JvmOverloads constructor(private val m
       }
       else {
         wasSingletonSpecifiedExplicitly = true
-        singleton = singletonStr.toBoolean()
+        singleton = singletonStr!!.toBoolean()
       }
     }
 
@@ -391,21 +394,12 @@ class RunnerAndConfigurationSettingsImpl @JvmOverloads constructor(private val m
   }
 
   override fun getSchemeState(): SchemeState? {
-    val configuration = configuration
-    if (configuration is UnknownRunConfiguration) {
-      return if (configuration.isDoNotStore) SchemeState.NON_PERSISTENT else SchemeState.UNCHANGED
+    val configuration = _configuration
+    return when (configuration) {
+      null -> SchemeState.UNCHANGED
+      is UnknownRunConfiguration -> if (configuration.isDoNotStore) SchemeState.NON_PERSISTENT else SchemeState.UNCHANGED
+      else -> null
     }
-    
-    if (isTemplate && _configuration != null) {
-      // todo optimize
-      val templateSettings = manager.createTemplateSettings(configuration.factory)
-      if (JDOMUtil.areElementsEqual(writeScheme(), templateSettings.writeScheme())) {
-        // this state doesn't mean that scheme will be removed - SchemeManager doesn't expect that scheme can be NON_PERSISTENT after UNCHANGED
-        // todo definitely, SchemeManager should be improved to support this case, but it is not safe to do right now
-        return SchemeState.NON_PERSISTENT
-      }
-    }
-    return null
   }
 
   private abstract inner class RunnerItem<T>(private val childTagName: String) {

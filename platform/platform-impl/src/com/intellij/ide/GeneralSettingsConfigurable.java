@@ -22,6 +22,7 @@ import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.options.ex.ConfigurableWrapper;
 import com.intellij.ui.components.JBRadioButton;
+import com.intellij.util.PlatformUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -56,6 +57,7 @@ public class GeneralSettingsConfigurable extends CompositeConfigurable<Searchabl
     settings.setSyncOnFrameActivation(myComponent.myChkSyncOnFrameActivation.isSelected());
     settings.setSaveOnFrameDeactivation(myComponent.myChkSaveOnFrameDeactivation.isSelected());
     settings.setConfirmExit(myComponent.myConfirmExit.isSelected());
+    settings.setShowWelcomeScreen(myComponent.myShowWelcomeScreen.isSelected());
     settings.setConfirmOpenNewProject(getConfirmOpenNewProject());
     settings.setProcessCloseConfirmation(getProcessCloseConfirmation());
 
@@ -102,6 +104,7 @@ public class GeneralSettingsConfigurable extends CompositeConfigurable<Searchabl
     isModified |= settings.isSaveOnFrameDeactivation() != myComponent.myChkSaveOnFrameDeactivation.isSelected();
     isModified |= settings.isAutoSaveIfInactive() != myComponent.myChkAutoSaveIfInactive.isSelected();
     isModified |= settings.isConfirmExit() != myComponent.myConfirmExit.isSelected();
+    isModified |= settings.isShowWelcomeScreen() != myComponent.myShowWelcomeScreen.isSelected();
     isModified |= settings.getConfirmOpenNewProject() != getConfirmOpenNewProject();
     isModified |= settings.getProcessCloseConfirmation() != getProcessCloseConfirmation();
     isModified |= isModified(myComponent.myTfInactiveTimeout, settings.getInactiveTimeout(), GeneralSettings.SAVE_FILES_AFTER_IDLE_SEC);
@@ -116,6 +119,7 @@ public class GeneralSettingsConfigurable extends CompositeConfigurable<Searchabl
     if (myComponent == null) {
       myComponent = new MyComponent();
     }
+    myComponent.myShowWelcomeScreen.setVisible(PlatformUtils.isDataGrip());
 
     myComponent.myChkAutoSaveIfInactive.addChangeListener(
       e -> myComponent.myTfInactiveTimeout.setEditable(myComponent.myChkAutoSaveIfInactive.isSelected()));
@@ -142,6 +146,11 @@ public class GeneralSettingsConfigurable extends CompositeConfigurable<Searchabl
     GeneralSettings settings = GeneralSettings.getInstance();
     myComponent.myChkReopenLastProject.setSelected(settings.isReopenLastProject());
     myComponent.myChkSupportScreenReaders.setSelected(settings.isSupportScreenReaders());
+    if (GeneralSettings.isSupportScreenReadersOverriden()) {
+      myComponent.myChkSupportScreenReaders.setEnabled(false);
+      myComponent.myChkSupportScreenReaders.setToolTipText(
+        "The option is overriden by the JVM property: \"" + GeneralSettings.SUPPORT_SCREEN_READERS + "\"");
+    }
     myComponent.myChkSyncOnFrameActivation.setSelected(settings.isSyncOnFrameActivation());
     myComponent.myChkSaveOnFrameDeactivation.setSelected(settings.isSaveOnFrameDeactivation());
     myComponent.myChkAutoSaveIfInactive.setSelected(settings.isAutoSaveIfInactive());
@@ -149,6 +158,7 @@ public class GeneralSettingsConfigurable extends CompositeConfigurable<Searchabl
     myComponent.myTfInactiveTimeout.setEditable(settings.isAutoSaveIfInactive());
     myComponent.myChkUseSafeWrite.setSelected(settings.isUseSafeWrite());
     myComponent.myConfirmExit.setSelected(settings.isConfirmExit());
+    myComponent.myShowWelcomeScreen.setSelected(settings.isShowWelcomeScreen());
     switch (settings.getConfirmOpenNewProject()) {
       case GeneralSettings.OPEN_PROJECT_ASK:
         myComponent.myConfirmWindowToOpenProject.setSelected(true);
@@ -194,6 +204,7 @@ public class GeneralSettingsConfigurable extends CompositeConfigurable<Searchabl
     private JTextField myTfInactiveTimeout;
     private JCheckBox myChkUseSafeWrite;
     private JCheckBox myConfirmExit;
+    private JCheckBox myShowWelcomeScreen;
     private JPanel myPluginOptionsPanel;
     private JBRadioButton myOpenProjectInNewWindow;
     private JBRadioButton myOpenProjectInSameWindow;

@@ -234,8 +234,8 @@ abstract class PyTestExecutionEnvironment<T : PyAbstractTestConfiguration>(confi
 
   override fun getTestSpecs(): MutableList<String> = java.util.ArrayList(configuration.getTestSpec())
 
-  override fun generateCommandLine(patchers: Array<out CommandLinePatcher>?): GeneralCommandLine {
-    val line = super.generateCommandLine(patchers)
+  override fun generateCommandLine(): GeneralCommandLine {
+    val line = super.generateCommandLine()
     line.workDirectory = java.io.File(configuration.workingDirectorySafe)
     return line
   }
@@ -269,21 +269,21 @@ private val DEFAULT_PATH = ""
  * Target depends on target type. It could be path to file/folder or python target
  */
 data class ConfigurationTarget(@ConfigField override var target: String,
-                               @ConfigField override var targetVariant: PyRunTargetVariant) : TargetWithVariant {
+                               @ConfigField override var targetType: PyRunTargetVariant) : TargetWithVariant {
   fun copyTo(dst: ConfigurationTarget) {
     // TODO:  do we have such method it in Kotlin?
     dst.target = target
-    dst.targetVariant = targetVariant
+    dst.targetType = targetType
   }
 
   /**
    * Validates configuration and throws exception if target is invalid
    */
   fun checkValid() {
-    if (targetVariant != PyRunTargetVariant.CUSTOM && target.isEmpty()) {
+    if (targetType != PyRunTargetVariant.CUSTOM && target.isEmpty()) {
       throw RuntimeConfigurationWarning("Target not provided")
     }
-    if (targetVariant == PyRunTargetVariant.PYTHON && !isWellFormed()) {
+    if (targetType == PyRunTargetVariant.PYTHON && !isWellFormed()) {
       throw RuntimeConfigurationError("Provide a qualified name of function, class or a module")
     }
   }
@@ -292,7 +292,7 @@ data class ConfigurationTarget(@ConfigField override var target: String,
     asPsiElement(configuration, configuration.getWorkingDirectoryAsVirtual())
 
   fun generateArgumentsLine(configuration: PyAbstractTestConfiguration): List<String> =
-    when (targetVariant) {
+    when (targetType) {
       PyRunTargetVariant.CUSTOM -> emptyList()
       PyRunTargetVariant.PYTHON -> getArgumentsForPythonTarget(configuration)
       PyRunTargetVariant.PATH -> listOf("--path", target.trim())
@@ -519,7 +519,7 @@ abstract class PyAbstractTestConfiguration(project: Project,
   }
 
   override fun suggestedName() =
-    when (target.targetVariant) {
+    when (target.targetType) {
       PyRunTargetVariant.PATH -> {
         val name = target.asVirtualFile()?.name
         "$testFrameworkName in " + (name ?: target.target)
@@ -540,7 +540,7 @@ abstract class PyAbstractTestConfiguration(project: Project,
 
   fun reset() {
     target.target = DEFAULT_PATH
-    target.targetVariant = PyRunTargetVariant.PATH
+    target.targetType = PyRunTargetVariant.PATH
     additionalArguments = ""
   }
 
@@ -624,6 +624,16 @@ object PyTestsConfigurationProducer : AbstractPythonTestConfigurationProducer<Py
   PythonTestConfigurationType.getInstance()) {
 
   override val configurationClass = PyAbstractTestConfiguration::class.java
+
+  override fun createLightConfiguration(context: ConfigurationContext): RunConfiguration? {
+    val module = context.module ?:return null
+    val project = context.project ?:return null
+    val configuration =
+      findConfigurationFactoryFromSettings(module).createTemplateConfiguration(project) as? PyAbstractTestConfiguration
+      ?: return null
+    if (!setupConfigurationFromContext(configuration, context, Ref(context.psiLocation))) return null
+    return configuration
+  }
 
   override fun cloneTemplateConfiguration(context: ConfigurationContext): RunnerAndConfigurationSettings {
     return cloneTemplateConfigurationStatic(context, findConfigurationFactoryFromSettings(context.module))
